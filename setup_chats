@@ -1,0 +1,175 @@
+#!/bin/bash
+
+# CSCI 351: Project 4 Script
+# Emerson Bolha
+# A script that creates 5 linux containers  to be used to house peerchat instances
+# ran as follows: sudo bash setup_chats
+# Note: uses xterm for terminals
+# need to run chmod u+x setup_chats to get bash to work if file is renamed
+
+# Reminders:
+# need & at the end of each line to allow each to run without the others closing (terminals)
+# make sure to add virtual eths to the right peers !!!!!
+
+# Required or we get error: 
+# Cannot create namespace file "/var/run/netns/Peerchat1": File exists
+ip netns delete "Peerchat 1"
+ip netns delete "Peerchat 2"
+ip netns delete "Linux Router"
+ip netns delete "Peerchat 3"
+ip netns delete "Peerchat 4"
+ip netns delete "Peerchat 5"
+
+# namespaces created
+ip netns add "Peerchat 1"
+ip netns add "Peerchat 2"
+ip netns add "Linux Router"
+ip netns add "Peerchat 3"
+ip netns add "Peerchat 4"
+ip netns add "Peerchat 5"
+
+#
+# Configuration of peer1 & peer2 & part of Linux Router 
+# Allows peer1, peer2 and Linux Router to ping each other
+#
+
+# configuring Peerchat1: making virtual eth for peer1 and sending bveth01 to Linux Router
+ip netns exec "Peerchat 1" ip link add veth01 type veth peer name bveth01
+ip netns exec "Peerchat 1" ifconfig veth01 10.0.0.1/24
+# bveth01 is moved to Linux Router where it will connect to br0
+ip netns exec "Peerchat 1" ip link set bveth01 netns "Linux Router"
+# creating default route for peer1 to linux router
+ip netns exec "Peerchat 1"  route add default gw 10.0.0.250
+ip netns exec "Peerchat 1" ifconfig lo up
+
+# configuring Peerchat2: making virtual eth for peer2 and sending bveth02 to Linux Router
+ip netns exec "Peerchat 2" ip link add veth02 type veth peer name bveth02
+ip netns exec "Peerchat 2" ifconfig veth02 10.0.0.2/24
+# bveth02 is moved to Linux Router where it will connect to br0
+ip netns exec "Peerchat 2" ip link set bveth02 netns "Linux Router"
+# creating default route for peer2 to linux router
+ip netns exec "Peerchat 2"  route add default gw 10.0.0.250
+ip netns exec "Peerchat 2" ifconfig lo up
+
+# Linux Router: setting up IPV4 forwarding
+ip netns exec "Linux Router" echo 1 > /proc/sys/net/ipv4/ip_forward
+#  creating veth0 & bveth03 to be used with br0 (connect peer1 to peer2)
+ip netns exec "Linux Router" ip link add veth0 type veth peer name bveth03
+ip netns exec "Linux Router" ifconfig veth0 10.0.0.250/24
+ip netns exec "Linux Router" ifconfig lo up
+
+# Linux Router: bridge creation for connecting peer1 & peer2 & Linux Router
+ip netns exec "Linux Router" ip link add br0 type bridge
+ip netns exec "Linux Router" ifconfig br0 up
+# giving bridge veths ip adresses
+ip netns exec "Linux Router" ifconfig bveth01 10.0.0.250/24
+ip netns exec "Linux Router" ifconfig bveth02 10.0.0.250/24
+ip netns exec "Linux Router" ifconfig bveth03 10.0.0.250/24
+# attaching veths to the bridge
+ip netns exec "Linux Router" ip link set bveth01 master br0
+ip netns exec "Linux Router" ip link set bveth02 master br0
+ip netns exec "Linux Router" ip link set bveth03 master br0
+
+#
+# at this point: peer1 can ping peer2 and if "Linux Router" starts a terminal they can ping both peer1 and peer2
+#
+
+
+#
+# Configuration of peer3 & peer4 & part of Linux Router
+# Allows peer1, peer2, peer3, peer4 and Linux Router to ping each other
+#
+
+# configuring Peerchat3: making virtual eth for peer3 and sending bveth11 to Linux Router
+ip netns exec "Peerchat 3" ip link add veth11 type veth peer name bveth11
+ip netns exec "Peerchat 3" ifconfig veth11 10.0.1.1/24
+# bveth11 is moved to Linux Router where it will connect to br1
+ip netns exec "Peerchat 3" ip link set bveth11 netns "Linux Router"
+# creating default route for peer3 to linux router
+ip netns exec "Peerchat 3"  route add default gw 10.0.1.250
+ip netns exec "Peerchat 3" ifconfig lo up
+
+# configuring Peerchat4: making virtual eth for peer4 and sending bveth12 to Linux Router
+ip netns exec "Peerchat 4" ip link add veth12 type veth peer name bveth12
+ip netns exec "Peerchat 4" ifconfig veth12 10.0.1.2/24
+# bveth12 is moved to Linux Router where where it will connect to br1
+ip netns exec "Peerchat 4" ip link set bveth12 netns "Linux Router"
+# creating default route for peer4 to linux router
+ip netns exec "Peerchat 4"  route add default gw 10.0.1.250
+ip netns exec "Peerchat 4" ifconfig lo up
+
+# Linux Router:
+#  creating veth1 & bveth13 to be used with br1 (connect peer3 to peer4)
+ip netns exec "Linux Router" ip link add veth1 type veth peer name bveth13
+ip netns exec "Linux Router" ifconfig veth1 10.0.1.250/24
+ip netns exec "Linux Router" ifconfig lo up
+
+# Linux Router: bridge creation for connecting peer3 & peer4 & Linux Router
+ip netns exec "Linux Router" ip link add br1 type bridge
+ip netns exec "Linux Router" ifconfig br1 up
+# giving bridge veths ip adresses
+
+# configuring virtual eths for the bridge
+ip netns exec "Linux Router" ifconfig bveth11 10.0.1.250/24
+ip netns exec "Linux Router" ifconfig bveth12 10.0.1.250/24
+ip netns exec "Linux Router" ifconfig bveth13 10.0.1.250/24
+# attaching veths to the bridge
+ip netns exec "Linux Router" ip link set bveth11 master br1
+ip netns exec "Linux Router" ip link set bveth12 master br1
+ip netns exec "Linux Router" ip link set bveth13 master br1
+
+#
+# at this point: peer1, peer2, peer3, peer4 and Linux Router can ping each other
+#
+
+
+#
+# Setting up virtual eth for connection between peer5 and Linux Router
+#
+
+# configuring Peerchat5: making virtual eth for peer5 and sending veth2 to Linux Router
+ip netns exec "Peerchat 5" ip link add veth21 type veth peer name veth2
+ip netns exec "Peerchat 5" ifconfig veth21 10.0.2.1/24
+# veth2 is moved to Linux Router 
+ip netns exec "Peerchat 5" ip link set veth2 netns "Linux Router"
+# creating default route for peer5 to linux router
+ip netns exec "Peerchat 5"  route add default gw 10.0.2.250
+ip netns exec "Peerchat 5" ifconfig lo up
+
+# configuring veth2 in linux router 
+ip netns exec "Linux Router" ifconfig veth2 10.0.2.250
+
+#
+# at this point: peer1, peer2, peer3, peer4, peer5 and Linux Router can ping each other
+# Starting xterms now
+#
+
+# starting Peerchat 1's xterm
+ip netns exec "Peerchat 1" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Peerchat 1" -e "
+ip netns identify;
+$SHELL" &
+
+# starting Peerchat 2's xterm
+ip netns exec "Peerchat 2" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Peerchat 2" -e "
+ip netns identify; 
+$SHELL" &
+
+# starting Linux Router's xterm
+ip netns exec "Linux Router" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Linux Router" -e "
+ip netns identify;
+$SHELL" &
+
+# starting Peerchat 3's xterm
+ip netns exec "Peerchat 3" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Peerchat 3" -e "
+ip netns identify;
+$SHELL" &
+
+# starting Peerchat 4's xterm
+ip netns exec "Peerchat 4" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Peerchat 4" -e "
+ip netns identify;
+$SHELL" &
+
+# starting Peerchat 5's xterm
+ip netns exec "Peerchat 5" xterm -hold -xrm 'xterm*allowTitleOps: false'  -T "Peerchat 5" -e "
+ip netns identify;
+$SHELL" &

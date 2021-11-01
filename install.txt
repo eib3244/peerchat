@@ -1,0 +1,115 @@
+Installing java and setting env. var to use java commands taken from:
+https://www.digitalocean.com/community/tutorials/how-to-install-java-with-apt-on-ubuntu-18-04
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+Installing the Oracle JDK
+---------------------------------------------------------------------------------------------------------------------------------------------
+If you want to install the Oracle JDK, which is the official version distributed by Oracle, you'll need to add a new package repository for the version you'd like to use.
+
+To install Java 8, which is the latest LTS version, first add its package repository:
+
+
+Type in terminal:
+sudo add-apt-repository ppa:webupd8team/java
+
+
+When you add the repository, you'll see a message like this:
+---------------------------------------------------------------------------------------------------------------------------------------------
+output
+ Oracle Java (JDK) Installer (automatically downloads and installs Oracle JDK8). There are no actual Jav
+a files in this PPA.
+
+Important -> Why Oracle Java 7 And 6 Installers No Longer Work: http://www.webupd8.org/2017/06/why-oracl
+e-java-7-and-6-installers-no.html
+
+Update: Oracle Java 9 has reached end of life: http://www.oracle.com/technetwork/java/javase/downloads/j
+dk9-downloads-3848520.html
+
+The PPA supports Ubuntu 18.04, 17.10, 16.04, 14.04 and 12.04.
+
+More info (and Ubuntu installation instructions):
+- for Oracle Java 8: http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html
+
+Debian installation instructions:
+- Oracle Java 8: http://www.webupd8.org/2014/03/how-to-install-oracle-java-8-in-debian.html
+
+For Oracle Java 10, see a different PPA: https://www.linuxuprising.com/2018/04/install-oracle-java-10-in-ubuntu-or.html
+
+More info: https://launchpad.net/~webupd8team/+archive/ubuntu/java
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Press [ENTER] to continue or Ctrl-c to cancel adding it.
+Press ENTER to continue. Then update your package list:
+
+
+Type in terminal:
+sudo apt update
+
+
+Once the package list updates, install Java 8:
+
+
+Type in terminal:
+sudo apt install oracle-java8-installer
+
+if you recieve an error like this:
+--------------------------------------------------------------------------
+E: Could not get lock /var/lib/apt/lists/lock � open (11: Resource temporarily unavailable)
+E: Unable to lock directory /var/lib/apt/lists/ 
+E: Could not get lock /var/lib/dpkg/lock � open (11: Resource temporarily unavailable) 
+E: Unable to lock the administration directory (/var/lib/dpkg/), is another process using it?
+------------------------------------------------------------------------------
+
+Type in terminal:
+ps aux | grep -i apt
+
+and then kill all the processes using apt with:
+
+Type in terminal:
+sudo kill -9 <process id>
+----------------------------------------------------------------------------------
+
+Your system will download the JDK from Oracle and ask you to accept the license agreement. Accept the agreement and the JDK will install.
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+Setting the JAVA_HOME Environment Variable:
+---------------------------------------------------------------------------------------------------------------------------------------------
+Find java installation with command:
+
+Type in terminal:
+sudo update-alternatives --config java
+
+
+Press <enter> to keep the current choice[*], or type selection number:
+
+
+Copy the path from your preferred installation. Then open /etc/environment using nano or your favorite text editor:
+
+Type in terminal:
+sudo nano /etc/environment
+
+
+At the end of this file, add the following line, making sure to replace the highlighted path with your own copied path:
+
+
+JAVA_HOME="YOUR-PATH"
+
+
+Modifying this file will set the JAVA_HOME path for all users on your system.
+Save the file and exit the editor.
+Now reload this file to apply the changes to your current session:
+
+
+Type in terminal:
+source /etc/environment
+
+
+Verify that the environment variable is set:
+
+Type in terminal:
+echo $JAVA_HOME
+
+you should now be able to use the javac and java commands to compile and run java programs
